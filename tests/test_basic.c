@@ -169,6 +169,63 @@ static void test_life_fed_cells_use_absorbed_color(void)
     ml_life_free(L);
 }
 
+static void test_life_inheritance_through_birth(void)
+{
+    /* Seed densely, feed every alive cell with one absorbed color,
+     * tick once, then confirm every alive cell — including newborns
+     * — carries that color (newborns inherit by averaging parents). */
+    ml_life *L = ml_life_new(8, 8);
+    ASSERT(L != NULL);
+    ml_life_seed_random(L, 0.50, 99u);
+
+    ml_grid *src = ml_grid_new(8, 8);
+    ASSERT(src != NULL);
+    ml_rgb absorbed = {0x40, 0xc8, 0x70};
+    for (int i = 0; i < 64; ++i) {
+        snprintf(src->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "*");
+        src->cells[i].fg = absorbed;
+        src->cells[i].has_fg = true;
+    }
+    ml_life_boost_from_grid(L, src, 80.0, 3);
+
+    int alive_before = ml_life_alive_count(L);
+    ASSERT(alive_before > 0);
+
+    ml_life_tick(L);
+    int alive_after = ml_life_alive_count(L);
+    ASSERT(alive_after > 0);
+
+    /* Stamp into a black-palette grid; any alive cell that doesn't
+     * carry the absorbed color (or some inherited average of it)
+     * would render in black. Since all parents started with the
+     * identical color, all newborns inherit exactly that color too. */
+    ml_grid *out = ml_grid_new(8, 8);
+    ASSERT(out != NULL);
+    ml_rgb black_pal[ML_PALETTE_STOPS] = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},
+                                          {0,0,0},{0,0,0},{0,0,0},{0,0,0}};
+    ml_life_stamp(L, out, black_pal, false);
+
+    int unfed = 0;
+    int matched = 0;
+    for (int i = 0; i < 64; ++i) {
+        if (out->cells[i].glyph[0] == '\0') continue;
+        if (out->cells[i].fg.r == absorbed.r &&
+            out->cells[i].fg.g == absorbed.g &&
+            out->cells[i].fg.b == absorbed.b) {
+            ++matched;
+        } else {
+            ++unfed;
+        }
+    }
+    /* All survivors and newborns should carry the inherited color. */
+    ASSERT(matched > 0);
+    ASSERT(unfed == 0);
+
+    ml_grid_free(out);
+    ml_grid_free(src);
+    ml_life_free(L);
+}
+
 static void test_grid_to_ansi_runs(void)
 {
     ml_grid *g = ml_grid_new(10, 3);
@@ -194,6 +251,7 @@ int main(void)
     test_grid_to_ansi_runs();
     test_life_boost_extends_survival();
     test_life_fed_cells_use_absorbed_color();
+    test_life_inheritance_through_birth();
     if (failures) {
         printf("FAILED: %d failures\n", failures);
         return 1;

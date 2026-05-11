@@ -107,7 +107,12 @@ int ml_life_tick(ml_life *L)
     }
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
+            /* Count alive neighbors. Also accumulate fed-color stats
+             * so we can paint newborns with the average of their fed
+             * parents (Conway inheritance). */
             int n = 0;
+            int fed_count = 0;
+            int sum_r = 0, sum_g = 0, sum_b = 0;
             for (int dy = -1; dy <= 1; ++dy) {
                 int ny = y + dy;
                 if (ny < 0 || ny >= h) continue;
@@ -115,7 +120,16 @@ int ml_life_tick(ml_life *L)
                     if (dx == 0 && dy == 0) continue;
                     int nx = x + dx;
                     if (nx < 0 || nx >= w) continue;
-                    if (L->cells[ny * w + nx] > 0) ++n;
+                    int nidx = ny * w + nx;
+                    if (L->cells[nidx] > 0) {
+                        ++n;
+                        if (L->fed[nidx]) {
+                            sum_r += L->fed_color[nidx].r;
+                            sum_g += L->fed_color[nidx].g;
+                            sum_b += L->fed_color[nidx].b;
+                            ++fed_count;
+                        }
+                    }
                 }
             }
             int idx = y * w + x;
@@ -140,7 +154,17 @@ int ml_life_tick(ml_life *L)
                     nv = 1;
                     L->decay[idx] = 0;
                     L->boost[idx] = 0;  /* newborn starts unboosted */
-                    L->fed[idx]   = 0;  /* and unfed */
+                    /* Inherit color from fed parents — average their
+                     * absorbed colors. If no parent is fed, the
+                     * newborn starts on the warm→cool age ramp. */
+                    if (fed_count > 0) {
+                        L->fed[idx] = 1;
+                        L->fed_color[idx].r = (uint8_t)(sum_r / fed_count);
+                        L->fed_color[idx].g = (uint8_t)(sum_g / fed_count);
+                        L->fed_color[idx].b = (uint8_t)(sum_b / fed_count);
+                    } else {
+                        L->fed[idx] = 0;
+                    }
                 }
             }
             L->next[idx] = nv;
