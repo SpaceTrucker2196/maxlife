@@ -30,6 +30,7 @@ struct ml_life {
     uint8_t  *cells;
     uint8_t  *next;
     uint8_t  *decay;
+    uint8_t  *boost;   /* extra would-die ticks a cell can survive */
     int       initial_alive;
 };
 
@@ -44,7 +45,8 @@ ml_life *ml_life_new(int width, int height)
     L->cells = (uint8_t *)calloc(n, 1);
     L->next  = (uint8_t *)calloc(n, 1);
     L->decay = (uint8_t *)calloc(n, 1);
-    if (!L->cells || !L->next || !L->decay) {
+    L->boost = (uint8_t *)calloc(n, 1);
+    if (!L->cells || !L->next || !L->decay || !L->boost) {
         ml_life_free(L);
         return NULL;
     }
@@ -57,6 +59,7 @@ void ml_life_free(ml_life *L)
     free(L->cells);
     free(L->next);
     free(L->decay);
+    free(L->boost);
     free(L);
 }
 
@@ -113,6 +116,12 @@ int ml_life_tick(ml_life *L)
             uint8_t nv  = 0;
             if (cur > 0) {
                 if (n == 2 || n == 3) {
+                    /* Normal survival. */
+                    nv = (cur < 255) ? (uint8_t)(cur + 1) : 255;
+                } else if (L->boost[idx] > 0) {
+                    /* Would-die override: spend one boost token,
+                     * survive anyway, age++. */
+                    --L->boost[idx];
                     nv = (cur < 255) ? (uint8_t)(cur + 1) : 255;
                 } else {
                     /* Died — start decay fade. */
@@ -121,8 +130,8 @@ int ml_life_tick(ml_life *L)
             } else {
                 if (n == 3) {
                     nv = 1;
-                    /* Newborn — any pending decay is overwritten. */
                     L->decay[idx] = 0;
+                    L->boost[idx] = 0;  /* newborn starts unboosted */
                 }
             }
             L->next[idx] = nv;
@@ -133,6 +142,22 @@ int ml_life_tick(ml_life *L)
     L->cells = L->next;
     L->next  = tmp;
     return alive_next;
+}
+
+void ml_life_boost_from_grid(ml_life *L, const ml_grid *src,
+                             double min_lum, uint8_t amount)
+{
+    if (!L || !src) return;
+    if (src->width != L->width || src->height != L->height) return;
+    int total = L->width * L->height;
+    for (int i = 0; i < total; ++i) {
+        if (L->cells[i] == 0) continue;          /* dead — no boost */
+        const ml_cell *c = &src->cells[i];
+        if (!c->has_fg) continue;                /* untouched bg cell */
+        double lum = 0.299 * c->fg.r + 0.587 * c->fg.g + 0.114 * c->fg.b;
+        if (lum < min_lum) continue;
+        if (L->boost[i] < amount) L->boost[i] = amount;
+    }
 }
 
 int ml_life_alive_count(const ml_life *L)

@@ -80,6 +80,51 @@ static void test_life_decay_after_death(void)
     ml_life_free(L);
 }
 
+static void test_life_boost_extends_survival(void)
+{
+    /* Construct a 5x5 with two isolated alive cells. Without boost
+     * Conway kills them in one tick (underpopulation). With boost,
+     * they survive that tick. */
+    ml_life *L = ml_life_new(5, 5);
+    ASSERT(L != NULL);
+    /* Use a high density seed then immediately overwrite to a known
+     * sparse state via the seed; for our purposes any cell with no
+     * 2..3 neighbors will die. The seed at 0.0 produces no cells. */
+    ml_life_seed_random(L, 0.0, 1u);
+    /* We can't directly poke cells through the public API, so instead
+     * use the boost-from-grid path: any alive cell gets a boost when
+     * the src grid has bright fg at that position. */
+    ml_life_seed_random(L, 1.0, 1u);  /* every disc cell alive */
+    int seeded = ml_life_alive_count(L);
+    ASSERT(seeded == 5 * 5);
+
+    /* Tick once: most cells die from overcrowding (n=8 → not in S23). */
+    ml_life_tick(L);
+    int after = ml_life_alive_count(L);
+    ASSERT(after < seeded);
+
+    /* Reseed full + boost everywhere. After tick, more cells should
+     * survive than without boost. */
+    ml_life_seed_random(L, 1.0, 1u);
+    ml_grid *src = ml_grid_new(5, 5);
+    ASSERT(src != NULL);
+    /* Paint a bright fg on every src cell so the boost setter fires. */
+    for (int i = 0; i < 25; ++i) {
+        snprintf(src->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "*");
+        src->cells[i].fg = (ml_rgb){0xff, 0xff, 0xff};
+        src->cells[i].has_fg = true;
+    }
+    ml_life_boost_from_grid(L, src, 80.0, 3);
+    ml_life_tick(L);
+    int boosted = ml_life_alive_count(L);
+    /* With +3 boost, no cell can die from rule yet — all 25 should
+     * have survived this single tick. */
+    ASSERT(boosted == seeded);
+
+    ml_grid_free(src);
+    ml_life_free(L);
+}
+
 static void test_grid_to_ansi_runs(void)
 {
     ml_grid *g = ml_grid_new(10, 3);
@@ -103,6 +148,7 @@ int main(void)
     test_life_seed_and_tick();
     test_life_decay_after_death();
     test_grid_to_ansi_runs();
+    test_life_boost_extends_survival();
     if (failures) {
         printf("FAILED: %d failures\n", failures);
         return 1;

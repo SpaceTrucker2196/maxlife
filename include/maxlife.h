@@ -91,8 +91,16 @@ void ml_life_seed_random(ml_life *L, double density, uint32_t seed);
 
 /* Advance one Conway B3/S23 generation. Survivors age; cells that just
  * died are marked for decay (rendered cool for a few frames). Returns
- * the new alive count. */
+ * the new alive count. A boost counter on each cell lets it survive
+ * `boost` extra would-die ticks (set via ml_life_boost_from_grid). */
 int  ml_life_tick(ml_life *L);
+
+/* For every alive cell whose corresponding cell in `src` has a
+ * fg-color luminance above `min_lum` (0..255), set the boost counter
+ * to at least `amount`. The cell will survive `amount` additional
+ * would-die ticks beyond what B3/S23 alone allows. */
+void ml_life_boost_from_grid(ml_life *L, const ml_grid *src,
+                             double min_lum, uint8_t amount);
 
 int  ml_life_alive_count(const ml_life *L);
 int  ml_life_initial_count(const ml_life *L);

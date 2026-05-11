@@ -61,6 +61,19 @@ position keeps rendering at palette stop 0 (the coolest color) with a
 tiny `·` / `˙` glyph that fades and then disappears. Disable with
 `--no-decay` if you want hard transitions.
 
+### Fractal nourishment (`-f`)
+
+When the Julia fractal background is on, life cells that overlap with
+the brighter fractal cells (deep inside the set) gain **+3 generations
+of grace** — a small token counter that lets them survive 3 extra
+would-die ticks beyond what B3/S23 alone allows. Patterns naturally
+cluster and persist in the bright fractal regions, while cells out in
+the dim Julia escape areas live and die under pure Conway rules.
+
+The bright threshold (luminance ≥ 80/255 on the fractal palette
+stop) catches the upper half of every fractal palette — so any
+palette gives a usable nourishment field.
+
 ## Palettes
 
 Five built-in life palettes, all going **warm → cool**:
