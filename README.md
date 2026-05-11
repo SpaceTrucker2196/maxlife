@@ -88,6 +88,34 @@ clusters of cells that found bright fractal regions stand out as
 patches of fractal-palette color — sapphire for ocean, ember-orange
 for ember, etc.
 
+### Consumption
+
+**Eaten fractal cells stay gone.** Each feeding marks the position
+in a persistent `consumed` mask. After every frame's fractal
+repaint, the mask is applied: positions that have been eaten are
+blanked again, even though the fractal painter just redrew them.
+
+Visually, life clusters carve "eaten zones" out of the fractal —
+expanding voids where the nourishment field has been completely
+depleted. The mask only resets when the life population collapses
+and the simulation **reseeds** (the "new cycle"), at which point a
+fresh fractal field becomes available everywhere. This means each
+cycle of life has a finite food supply, and the visualization
+naturally pulses: bright fractal → life clusters bloom and eat
+through it → fractal goes dark → population collapses → reseed
+→ repeat.
+
+### Inheritance
+
+When Conway births a new cell (3 alive neighbors), the newborn
+inherits the **average fed-color** of any fed parents. If at least
+one parent was fed, the child is fed too. So color "lineages" spread
+through descendant generations — a sapphire-blue cluster that found
+an ocean-fractal hotspot will keep producing sapphire children even
+after drifting off the bright region. Cells from differently-
+colored populations produce blended children where their gliders
+meet.
+
 ## Palettes
 
 Five built-in life palettes, all going **warm → cool**:

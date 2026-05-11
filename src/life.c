@@ -33,6 +33,7 @@ struct ml_life {
     uint8_t  *boost;     /* extra would-die ticks a cell can survive */
     uint8_t  *fed;       /* 1 if cell has ever eaten from the fractal */
     ml_rgb   *fed_color; /* color absorbed at the most recent feeding */
+    uint8_t  *consumed;  /* 1 if this position has been eaten this life cycle */
     int       initial_alive;
 };
 
@@ -50,8 +51,9 @@ ml_life *ml_life_new(int width, int height)
     L->boost     = (uint8_t *)calloc(n, 1);
     L->fed       = (uint8_t *)calloc(n, 1);
     L->fed_color = (ml_rgb  *)calloc(n, sizeof(ml_rgb));
+    L->consumed  = (uint8_t *)calloc(n, 1);
     if (!L->cells || !L->next || !L->decay || !L->boost
-        || !L->fed || !L->fed_color) {
+        || !L->fed || !L->fed_color || !L->consumed) {
         ml_life_free(L);
         return NULL;
     }
@@ -67,6 +69,7 @@ void ml_life_free(ml_life *L)
     free(L->boost);
     free(L->fed);
     free(L->fed_color);
+    free(L->consumed);
     free(L);
 }
 
@@ -89,7 +92,10 @@ void ml_life_seed_random(ml_life *L, double density, uint32_t seed)
         } else {
             L->cells[i] = 0;
         }
-        L->decay[i] = 0;
+        L->decay[i]    = 0;
+        L->boost[i]    = 0;
+        L->fed[i]      = 0;
+        L->consumed[i] = 0; /* "new cycle" — fractal grows back fresh */
     }
     L->initial_alive = alive;
 }
@@ -195,6 +201,24 @@ void ml_life_boost_from_grid(ml_life *L, const ml_grid *src,
          * something else). */
         L->fed[i]       = 1;
         L->fed_color[i] = c->fg;
+        /* And the fractal cell at this position is consumed —
+         * stays gone until the life cycle reseeds. */
+        L->consumed[i]  = 1;
+    }
+}
+
+void ml_life_apply_consumed_mask(const ml_life *L, ml_grid *g)
+{
+    if (!L || !g) return;
+    if (g->width != L->width || g->height != L->height) return;
+    int total = L->width * L->height;
+    for (int i = 0; i < total; ++i) {
+        if (!L->consumed[i]) continue;
+        ml_cell *c = &g->cells[i];
+        c->glyph[0] = '\0';
+        c->has_fg = false;
+        c->has_bg = false;
+        c->style = 0;
     }
 }
 

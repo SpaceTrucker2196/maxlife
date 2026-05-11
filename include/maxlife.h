@@ -97,10 +97,17 @@ int  ml_life_tick(ml_life *L);
 
 /* For every alive cell whose corresponding cell in `src` has a
  * fg-color luminance above `min_lum` (0..255), set the boost counter
- * to at least `amount`. The cell will survive `amount` additional
- * would-die ticks beyond what B3/S23 alone allows. */
+ * to at least `amount`, mark the cell as fed (with src's fg as its
+ * absorbed color), and add the position to the persistent "consumed"
+ * mask. The mask is cleared only on reseed — once a fractal cell is
+ * eaten it stays eaten through the current life cycle. */
 void ml_life_boost_from_grid(ml_life *L, const ml_grid *src,
                              double min_lum, uint8_t amount);
+
+/* Blank (clear glyph + colors) every cell in `g` whose position is
+ * marked consumed. Called each frame after the fractal repaint so
+ * eaten cells don't visually return. */
+void ml_life_apply_consumed_mask(const ml_life *L, ml_grid *g);
 
 int  ml_life_alive_count(const ml_life *L);
 int  ml_life_initial_count(const ml_life *L);

@@ -117,11 +117,15 @@ int ml_run(const ml_options *opt)
         if (opt->fractal) {
             ml_fractal_paint(canvas, t, frac_pal, opt->fractal_type);
             /* Bright fractal cells nourish overlapping life cells:
-             * each gives +3 would-die-survival tokens. The threshold
-             * (luminance ≥ 80 out of 255) catches the brighter half
-             * of the Julia palette — the inner glyphs ░ ▒ ▓ where
-             * the iteration didn't escape immediately. */
+             * each gives +3 would-die-survival tokens and marks the
+             * cell consumed. The threshold (luminance ≥ 80 / 255)
+             * catches the brighter half of every fractal palette. */
             ml_life_boost_from_grid(life, canvas, 80.0, 3);
+            /* Apply the persistent consumed mask AFTER boost so cells
+             * eaten in earlier frames stay blanked even though the
+             * fractal painter just redrew them, and cells eaten this
+             * frame also vanish immediately. Reseed clears the mask. */
+            ml_life_apply_consumed_mask(life, canvas);
         } else {
             ml_grid_clear(canvas);
         }

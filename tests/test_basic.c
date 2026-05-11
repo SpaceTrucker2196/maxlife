@@ -253,6 +253,58 @@ static void test_fractal_types_all_render(void)
     ml_grid_free(g);
 }
 
+static void test_consumed_mask_blanks_eaten_cells(void)
+{
+    /* Feed → cells get marked consumed. Repaint the canvas, apply
+     * mask → eaten positions are now blank. Reseed → mask clears,
+     * fresh repaint paints again normally. */
+    ml_life *L = ml_life_new(6, 6);
+    ASSERT(L != NULL);
+    ml_life_seed_random(L, 1.0, 1u);  /* all alive */
+
+    ml_grid *g = ml_grid_new(6, 6);
+    ASSERT(g != NULL);
+    /* Pretend every cell is a bright fractal cell. */
+    for (int i = 0; i < 36; ++i) {
+        snprintf(g->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "▓");
+        g->cells[i].fg = (ml_rgb){0xff, 0xff, 0xff};
+        g->cells[i].has_fg = true;
+    }
+    /* Feed — marks all positions consumed. */
+    ml_life_boost_from_grid(L, g, 80.0, 3);
+
+    /* Repaint g afresh — fractal "regenerates" from nothing. */
+    for (int i = 0; i < 36; ++i) {
+        snprintf(g->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "▓");
+        g->cells[i].fg = (ml_rgb){0xff, 0xff, 0xff};
+        g->cells[i].has_fg = true;
+    }
+    /* Apply mask — every cell should now be blank (all positions
+     * were marked consumed by the boost above). */
+    ml_life_apply_consumed_mask(L, g);
+    for (int i = 0; i < 36; ++i) {
+        ASSERT(g->cells[i].glyph[0] == '\0');
+    }
+
+    /* Reseed should clear the consumed mask — a fresh repaint +
+     * mask should leave the grid intact. */
+    ml_life_seed_random(L, 1.0, 2u);
+    for (int i = 0; i < 36; ++i) {
+        snprintf(g->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "▓");
+        g->cells[i].fg = (ml_rgb){0xff, 0xff, 0xff};
+        g->cells[i].has_fg = true;
+    }
+    ml_life_apply_consumed_mask(L, g);
+    int painted = 0;
+    for (int i = 0; i < 36; ++i) {
+        if (g->cells[i].glyph[0] != '\0') ++painted;
+    }
+    ASSERT(painted == 36);
+
+    ml_grid_free(g);
+    ml_life_free(L);
+}
+
 static void test_grid_to_ansi_runs(void)
 {
     ml_grid *g = ml_grid_new(10, 3);
@@ -280,6 +332,7 @@ int main(void)
     test_life_fed_cells_use_absorbed_color();
     test_life_inheritance_through_birth();
     test_fractal_types_all_render();
+    test_consumed_mask_blanks_eaten_cells();
     if (failures) {
         printf("FAILED: %d failures\n", failures);
         return 1;
