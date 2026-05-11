@@ -115,11 +115,26 @@ void ml_life_stamp(const ml_life *L, ml_grid *dst,
 
 /* ---------- fractal background ------------------------------------- */
 
-/* Paint a slowly-drifting Julia field into `g` using the given 8-stop
- * palette. `t` advances the c parameter. No symmetry folding — this
- * is just an organic backdrop. */
+/* Fractal type — different recurrences in the iteration loop. All
+ * share the same drifting c parameter so they animate consistently. */
+typedef enum {
+    ML_FRACTAL_JULIA = 0,         /* z² + c — classic */
+    ML_FRACTAL_BURNING_SHIP,      /* (|Re(z)| + i|Im(z)|)² + c */
+    ML_FRACTAL_TRICORN,           /* conj(z)² + c — Mandelbar */
+    ML_FRACTAL_MULTIBROT3,        /* z³ + c */
+    ML_FRACTAL_PHOENIX,           /* z² + c + p·z_{n-1} */
+    ML_FRACTAL_TYPE_COUNT,
+} ml_fractal_type;
+
+const char     *ml_fractal_type_name(ml_fractal_type t);
+ml_fractal_type ml_fractal_type_from_name(const char *name);
+
+/* Paint a slowly-drifting fractal field into `g` using the given
+ * 8-stop palette. `t` advances the iteration parameter so each frame
+ * is slightly different. */
 void ml_fractal_paint(ml_grid *g, double t,
-                      const ml_rgb palette[ML_PALETTE_STOPS]);
+                      const ml_rgb palette[ML_PALETTE_STOPS],
+                      ml_fractal_type type);
 
 /* ---------- render ------------------------------------------------- */
 
@@ -145,7 +160,8 @@ typedef struct {
     int    height;             /* 0 = derive from terminal */
     double density;            /* initial seed density, default 0.18 */
     double fps;                /* frames per second, default 24 */
-    bool   fractal;            /* draw Julia background under life cells */
+    bool   fractal;            /* draw fractal background under life cells */
+    ml_fractal_type       fractal_type;
     ml_palette_id         life_palette;
     ml_fractal_palette_id fractal_palette;
     bool   decay;              /* show recently-dead cells fading */

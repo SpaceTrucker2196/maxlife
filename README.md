@@ -102,6 +102,22 @@ For the optional fractal background, 8 named palettes (Julia-set style,
 dark→bright): `aurora`, `ember`, `ocean`, `forest`, `sakura`,
 `twilight`, `lava`, `coral`.
 
+## Fractal types
+
+Five different fractal variants for the background (`-F` / `--fractal-type`):
+
+| name           | recurrence              | character |
+|----------------|-------------------------|-----------|
+| `julia`        | `z² + c`                | smooth, classic spiral lobes (default) |
+| `ship`         | `(\|Re(z)\| + i\|Im(z)\|)² + c` | jagged, ship-hull silhouettes |
+| `tricorn`      | `conj(z)² + c`          | 3-fold symmetric, sharper than Julia |
+| `multibrot3`   | `z³ + c`                | 4-fold lobes, denser bright regions |
+| `phoenix`      | `z² + c + p·z_{n-1}`    | swirly with memory; classic `p=0.5667` |
+
+All five share the same drifting `c = 0.7885 · e^{i·0.05t}` parameter
+so they animate at the same gentle pace. Aliases: `burning_ship` for
+`ship`, `mandelbar` for `tricorn`.
+
 ## Flags
 
 | short | long                       | what it does |
@@ -109,7 +125,8 @@ dark→bright): `aurora`, `ember`, `ocean`, `forest`, `sakura`,
 | `-h` | `--help`                       | show help |
 | `-d` | `--density N`                  | initial alive density 0.01..0.60 (default 0.18) |
 | `-P` | `--palette NAME`               | life palette (warm→cool) |
-| `-f` | `--fractal`                    | Julia field background |
+| `-f` | `--fractal`                    | fractal field background |
+| `-F` | `--fractal-type NAME`          | julia / ship / tricorn / multibrot3 / phoenix |
 |      | `--fractal-palette NAME`       | which fractal palette to use |
 |      | `--no-decay`                   | don't fade dying cells |
 | `-r` | `--fps N`                      | frames per second (default 24) |

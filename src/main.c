@@ -22,7 +22,10 @@ static void usage(FILE *out)
         "      --no-decay            dying cells vanish immediately instead of fading\n"
         "\n"
         "Background:\n"
-        "  -f, --fractal             slowly-drifting Julia field underneath\n"
+        "  -f, --fractal             slowly-drifting fractal field underneath\n"
+        "  -F, --fractal-type <name>\n"
+        "                            julia | ship | tricorn | multibrot3 |\n"
+        "                            phoenix (default julia)\n"
         "      --fractal-palette <name>\n"
         "                            aurora | ember | ocean | forest | sakura |\n"
         "                            twilight | lava | coral (default ocean)\n"
@@ -74,6 +77,16 @@ int main(int argc, char **argv)
                 return 2;
             }
             opt.life_palette = id;
+            continue;
+        }
+        if (match(a, "-F", "--fractal-type") && i + 1 < argc) {
+            const char *v = argv[++i];
+            ml_fractal_type ft = ml_fractal_type_from_name(v);
+            if ((int)ft < 0) {
+                fprintf(stderr, "maxlife: unknown fractal type %s\n", v);
+                return 2;
+            }
+            opt.fractal_type = ft;
             continue;
         }
         if (match(a, NULL, "--fractal-palette") && i + 1 < argc) {

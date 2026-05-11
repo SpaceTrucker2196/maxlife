@@ -226,6 +226,33 @@ static void test_life_inheritance_through_birth(void)
     ml_life_free(L);
 }
 
+static void test_fractal_types_all_render(void)
+{
+    /* Every fractal type must render some non-empty cells into a
+     * small grid without crashing. Also exercises the type name
+     * lookup. */
+    ml_grid *g = ml_grid_new(40, 20);
+    ASSERT(g != NULL);
+    const ml_rgb *pal = ml_fractal_palette(ML_FP_OCEAN);
+    for (int i = 0; i < ML_FRACTAL_TYPE_COUNT; ++i) {
+        ml_grid_clear(g);
+        ml_fractal_paint(g, 1.0, pal, (ml_fractal_type)i);
+        int painted = 0;
+        for (int j = 0; j < g->width * g->height; ++j) {
+            if (g->cells[j].glyph[0] != '\0') ++painted;
+        }
+        ASSERT(painted > 0);
+        /* Round-trip the type name. */
+        const char *name = ml_fractal_type_name((ml_fractal_type)i);
+        ASSERT(ml_fractal_type_from_name(name) == (ml_fractal_type)i);
+    }
+    /* Common aliases. */
+    ASSERT(ml_fractal_type_from_name("burning_ship") == ML_FRACTAL_BURNING_SHIP);
+    ASSERT(ml_fractal_type_from_name("mandelbar")    == ML_FRACTAL_TRICORN);
+    ASSERT((int)ml_fractal_type_from_name("xyzzy")   < 0);
+    ml_grid_free(g);
+}
+
 static void test_grid_to_ansi_runs(void)
 {
     ml_grid *g = ml_grid_new(10, 3);
@@ -252,6 +279,7 @@ int main(void)
     test_life_boost_extends_survival();
     test_life_fed_cells_use_absorbed_color();
     test_life_inheritance_through_birth();
+    test_fractal_types_all_render();
     if (failures) {
         printf("FAILED: %d failures\n", failures);
         return 1;

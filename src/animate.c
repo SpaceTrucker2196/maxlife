@@ -22,6 +22,7 @@ void ml_options_default(ml_options *opt)
     opt->density = 0.18;
     opt->fps = 24.0;
     opt->fractal = false;
+    opt->fractal_type = ML_FRACTAL_JULIA;
     opt->life_palette = ML_PAL_THERMAL;
     opt->fractal_palette = ML_FP_OCEAN;
     opt->decay = true;
@@ -114,7 +115,7 @@ int ml_run(const ml_options *opt)
 
         /* Background: fractal or clear. */
         if (opt->fractal) {
-            ml_fractal_paint(canvas, t, frac_pal);
+            ml_fractal_paint(canvas, t, frac_pal, opt->fractal_type);
             /* Bright fractal cells nourish overlapping life cells:
              * each gives +3 would-die-survival tokens. The threshold
              * (luminance ≥ 80 out of 255) catches the brighter half
