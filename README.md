@@ -74,6 +74,20 @@ The bright threshold (luminance ≥ 80/255 on the fractal palette
 stop) catches the upper half of every fractal palette — so any
 palette gives a usable nourishment field.
 
+**Fed cells adopt the color they ate.** Once a life cell feeds on a
+fractal cell, it absorbs that fractal color and renders in it for
+the rest of its lifecycle — no more warm→cool age fade for that
+cell. Cells that continue to overlap bright fractal regions update
+their color as the Julia parameter drifts and the palette shifts
+beneath them. When a fed cell finally dies, the fed state is
+cleared; a new birth at that position starts fresh on the age-based
+ramp until it eats something itself.
+
+Visually: most of the field follows the warm→cool age fade, but
+clusters of cells that found bright fractal regions stand out as
+patches of fractal-palette color — sapphire for ocean, ember-orange
+for ember, etc.
+
 ## Palettes
 
 Five built-in life palettes, all going **warm → cool**:

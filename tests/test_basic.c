@@ -125,6 +125,50 @@ static void test_life_boost_extends_survival(void)
     ml_life_free(L);
 }
 
+static void test_life_fed_cells_use_absorbed_color(void)
+{
+    /* Build a 5×5 with all cells alive, paint a known fractal color
+     * everywhere, feed, stamp into a different palette — confirm the
+     * stamped fg matches the absorbed color, NOT the life palette. */
+    ml_life *L = ml_life_new(5, 5);
+    ASSERT(L != NULL);
+    ml_life_seed_random(L, 1.0, 1u);
+
+    ml_grid *src = ml_grid_new(5, 5);
+    ASSERT(src != NULL);
+    ml_rgb absorbed = {0x12, 0xab, 0xef};
+    for (int i = 0; i < 25; ++i) {
+        snprintf(src->cells[i].glyph, ML_MAX_GLYPH_BYTES, "%s", "*");
+        src->cells[i].fg = absorbed;
+        src->cells[i].has_fg = true;
+    }
+    ml_life_boost_from_grid(L, src, 80.0, 3);
+
+    ml_grid *out = ml_grid_new(5, 5);
+    ASSERT(out != NULL);
+    /* Use a palette whose stops are all-zero so a "palette" rendering
+     * would produce black (clearly distinguishable from absorbed). */
+    ml_rgb black_pal[ML_PALETTE_STOPS] = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},
+                                          {0,0,0},{0,0,0},{0,0,0},{0,0,0}};
+    ml_life_stamp(L, out, black_pal, true);
+
+    /* Every alive cell in `out` must have fg == absorbed, not the
+     * black palette. */
+    int matched = 0;
+    for (int i = 0; i < 25; ++i) {
+        if (out->cells[i].glyph[0] == '\0') continue;
+        ASSERT(out->cells[i].fg.r == absorbed.r);
+        ASSERT(out->cells[i].fg.g == absorbed.g);
+        ASSERT(out->cells[i].fg.b == absorbed.b);
+        ++matched;
+    }
+    ASSERT(matched > 0);
+
+    ml_grid_free(out);
+    ml_grid_free(src);
+    ml_life_free(L);
+}
+
 static void test_grid_to_ansi_runs(void)
 {
     ml_grid *g = ml_grid_new(10, 3);
@@ -149,6 +193,7 @@ int main(void)
     test_life_decay_after_death();
     test_grid_to_ansi_runs();
     test_life_boost_extends_survival();
+    test_life_fed_cells_use_absorbed_color();
     if (failures) {
         printf("FAILED: %d failures\n", failures);
         return 1;

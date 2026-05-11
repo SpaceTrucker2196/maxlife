@@ -30,7 +30,9 @@ struct ml_life {
     uint8_t  *cells;
     uint8_t  *next;
     uint8_t  *decay;
-    uint8_t  *boost;   /* extra would-die ticks a cell can survive */
+    uint8_t  *boost;     /* extra would-die ticks a cell can survive */
+    uint8_t  *fed;       /* 1 if cell has ever eaten from the fractal */
+    ml_rgb   *fed_color; /* color absorbed at the most recent feeding */
     int       initial_alive;
 };
 
@@ -42,11 +44,14 @@ ml_life *ml_life_new(int width, int height)
     L->width = width;
     L->height = height;
     size_t n = (size_t)width * (size_t)height;
-    L->cells = (uint8_t *)calloc(n, 1);
-    L->next  = (uint8_t *)calloc(n, 1);
-    L->decay = (uint8_t *)calloc(n, 1);
-    L->boost = (uint8_t *)calloc(n, 1);
-    if (!L->cells || !L->next || !L->decay || !L->boost) {
+    L->cells     = (uint8_t *)calloc(n, 1);
+    L->next      = (uint8_t *)calloc(n, 1);
+    L->decay     = (uint8_t *)calloc(n, 1);
+    L->boost     = (uint8_t *)calloc(n, 1);
+    L->fed       = (uint8_t *)calloc(n, 1);
+    L->fed_color = (ml_rgb  *)calloc(n, sizeof(ml_rgb));
+    if (!L->cells || !L->next || !L->decay || !L->boost
+        || !L->fed || !L->fed_color) {
         ml_life_free(L);
         return NULL;
     }
@@ -60,6 +65,8 @@ void ml_life_free(ml_life *L)
     free(L->next);
     free(L->decay);
     free(L->boost);
+    free(L->fed);
+    free(L->fed_color);
     free(L);
 }
 
@@ -124,14 +131,16 @@ int ml_life_tick(ml_life *L)
                     --L->boost[idx];
                     nv = (cur < 255) ? (uint8_t)(cur + 1) : 255;
                 } else {
-                    /* Died — start decay fade. */
+                    /* Died — start decay fade, forget what it ate. */
                     L->decay[idx] = DECAY_MAX;
+                    L->fed[idx]   = 0;
                 }
             } else {
                 if (n == 3) {
                     nv = 1;
                     L->decay[idx] = 0;
                     L->boost[idx] = 0;  /* newborn starts unboosted */
+                    L->fed[idx]   = 0;  /* and unfed */
                 }
             }
             L->next[idx] = nv;
@@ -157,6 +166,11 @@ void ml_life_boost_from_grid(ml_life *L, const ml_grid *src,
         double lum = 0.299 * c->fg.r + 0.587 * c->fg.g + 0.114 * c->fg.b;
         if (lum < min_lum) continue;
         if (L->boost[i] < amount) L->boost[i] = amount;
+        /* Cell adopts the color it just ate; it'll render in this
+         * color for the rest of its lifecycle (or until it eats
+         * something else). */
+        L->fed[i]       = 1;
+        L->fed_color[i] = c->fg;
     }
 }
 
@@ -217,12 +231,18 @@ void ml_life_stamp(const ml_life *L, ml_grid *dst,
         uint8_t age = L->cells[i];
         if (age > 0) {
             ml_cell *c = &dst->cells[i];
-            int pi = age_to_palette(age);
             int gi = (age - 1 < (int)LIFE_GLYPH_N)
                 ? (int)(age - 1)
                 : (int)(LIFE_GLYPH_N - 1);
             snprintf(c->glyph, ML_MAX_GLYPH_BYTES, "%s", LIFE_GLYPHS[gi]);
-            c->fg = palette[pi];
+            /* Fed cells render in the color they absorbed from the
+             * fractal; unfed cells use the age-based warm→cool ramp. */
+            if (L->fed[i]) {
+                c->fg = L->fed_color[i];
+            } else {
+                int pi = age_to_palette(age);
+                c->fg = palette[pi];
+            }
             c->has_fg = true;
             c->has_bg = false;
             c->style = (age <= 2) ? ML_STYLE_BOLD : ML_STYLE_NONE;
