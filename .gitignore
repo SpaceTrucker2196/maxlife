@@ -1,0 +1,13 @@
+*.o
+*.a
+*.so
+*.dylib
+maxlife
+tests/test_basic
+
+.DS_Store
+._*
+.idea/
+.vscode/
+*.swp
+core
