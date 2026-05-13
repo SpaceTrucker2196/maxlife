@@ -15,6 +15,12 @@ coming from each cell's own lifecycle.
     just died = coolest (brief decay fade)
 ```
 
+## Requirements
+
+- POSIX terminal + libc (`termios.h`, `sys/ioctl.h`)
+- C99 compiler (`clang` or `gcc`)
+- UTF-8 terminal with ANSI truecolor support (24-bit)
+
 ## Build
 
 ```sh
@@ -22,8 +28,27 @@ make
 ./maxlife
 ```
 
-Tested on macOS (clang) and Linux (gcc). Any POSIX system with a C99
-compiler, libc, `termios.h`, and `sys/ioctl.h` should work.
+### Test
+
+```sh
+make test
+```
+
+### Install
+
+```sh
+make install
+```
+
+Use `PREFIX`/`DESTDIR` if needed:
+
+```sh
+make install PREFIX=/usr
+make install DESTDIR=/tmp/pkgroot
+```
+
+Tested on macOS (clang) and Linux (gcc). Any POSIX system with the
+requirements above should work.
 
 ## Run
 
@@ -31,9 +56,11 @@ compiler, libc, `termios.h`, and `sys/ioctl.h` should work.
 ./maxlife                                  # thermal palette, no background
 ./maxlife -f                               # with Julia fractal background
 ./maxlife -P phoenix -f --fractal-palette twilight
+./maxlife -F tricorn -f --fractal-palette ocean
 ./maxlife -d 0.10                          # very sparse seed → rapid reseed cycles
 ./maxlife -d 0.35                          # busy
 ./maxlife --no-decay                       # dying cells vanish without the fade
+./maxlife --no-fractal                     # disable fractal background explicitly
 ./maxlife -r 60                            # smoother (if your terminal can keep up)
 ./maxlife --seed 42                        # deterministic pattern
 ```
@@ -154,6 +181,7 @@ so they animate at the same gentle pace. Aliases: `burning_ship` for
 | `-d` | `--density N`                  | initial alive density 0.01..0.60 (default 0.18) |
 | `-P` | `--palette NAME`               | life palette (warm→cool) |
 | `-f` | `--fractal`                    | fractal field background |
+|      | `--no-fractal`                 | disable fractal background |
 | `-F` | `--fractal-type NAME`          | julia / ship / tricorn / multibrot3 / phoenix |
 |      | `--fractal-palette NAME`       | which fractal palette to use |
 |      | `--no-decay`                   | don't fade dying cells |
@@ -173,7 +201,7 @@ maxlife/
 │   ├── terminal.c    # termios + ANSI control
 │   ├── render.c      # Cell grid → ANSI emitter
 │   ├── palette.c     # 5 life palettes + 8 fractal palettes
-│   ├── fractal.c     # drifting Julia background
+│   ├── fractal.c     # drifting fractal background (5 variants)
 │   └── life.c        # Conway B3/S23 with age + decay
 └── tests/
     └── test_basic.c
